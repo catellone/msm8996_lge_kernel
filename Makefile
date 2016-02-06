@@ -391,6 +391,10 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -std=gnu89 \
 		   -mcpu=cortex-a57 -mtune=cortex-a57 -fdiagnostics-color=always
 
+# We must turn off the Android-specific compiler options as early as possible
+# otherwise cc-option calls below may erroneously fail.
+KBUILD_CFLAGS	+= $(call cc-option,-mno-android,)
+
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
 KBUILD_AFLAGS   := -D__ASSEMBLY__
