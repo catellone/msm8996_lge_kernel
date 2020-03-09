@@ -25,6 +25,12 @@ config ZRAM_LZ4_COMPRESS
 	  This option enables LZ4 compression algorithm support. Compression
 	  algorithm can be changed using `comp_algorithm' device attribute.
 
+config ZRAM_SIZE_OVERRIDE
+	int "zram size to set from kernel"
+	range 1 8
+	default 2
+
+
 config ZRAM_DEBUG
 	bool "Compressed RAM block device debug support"
 	depends on ZRAM
