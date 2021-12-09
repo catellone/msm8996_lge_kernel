@@ -162,7 +162,7 @@ int oem_mdss_aod_decide_status(struct msm_fb_data_type *mfd, int blank_mode)
 			labibb_ctrl = true;
 		}
 #else
-#if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI)
+#if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI) && !defined(CONFIG_LGE_DISPLAY_AOD_ON_CUSTOM)
 			/* U0_BLANK -> U3_UNBLANK, When font download is Fail */
 			if (blank_mode == FB_BLANK_UNBLANK && aod_node == 1 && !mfd->watch.current_font_type) {
 				cmd_status = ON_CMD;
@@ -171,12 +171,27 @@ int oem_mdss_aod_decide_status(struct msm_fb_data_type *mfd, int blank_mode)
 				break;
 			}
 #endif
+#if defined(CONFIG_LGE_DISPLAY_AOD_ON_CUSTOM)
+            /* U0_BLANK -> U3_UNBLANK */
+			if (blank_mode == FB_BLANK_UNBLANK && aod_node == 2) {
+				cmd_status = ON_CMD;
+				next_mode = AOD_PANEL_MODE_U3_UNBLANK;
+				labibb_ctrl = true;
+			}
+            /* U0_BLANK -> U2_UNBLANK */
+			else if (blank_mode == FB_BLANK_NORMAL && aod_node == 2) {
+				cmd_status = ON_CMD;
+				next_mode = AOD_PANEL_MODE_U2_UNBLANK;
+				labibb_ctrl = true;
+			}
+#else
 			/* U0_BLANK -> U2_UNBLANK*/
 			if (blank_mode == FB_BLANK_UNBLANK && aod_node == 1 && aod_keep_u2 == AOD_KEEP_U2) {
 				cmd_status = ON_AND_AOD;
 				next_mode = AOD_PANEL_MODE_U2_UNBLANK;
 				labibb_ctrl = true;
 			}
+#endif
 			/* U0_BLANK -> U3_UNBLANK */
 			else if ((blank_mode == FB_BLANK_UNBLANK && aod_node == 0) ||
 				 (blank_mode == FB_BLANK_UNBLANK && aod_node == 1 && aod_keep_u2 == AOD_MOVE_TO_U3)) {
@@ -203,12 +218,33 @@ int oem_mdss_aod_decide_status(struct msm_fb_data_type *mfd, int blank_mode)
 #endif
 			next_mode = AOD_PANEL_MODE_U0_BLANK;
 		}
-#if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI)
+#if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI) && !defined(CONFIG_LGE_DISPLAY_AOD_ON_CUSTOM)
 		/* U2_UNBLANK -> U0_BLANK, When font download is Fail */
 		else if (blank_mode == FB_BLANK_POWERDOWN && aod_node == 1 && !mfd->watch.current_font_type) {
 			cmd_status = OFF_CMD;
 			next_mode = AOD_PANEL_MODE_U0_BLANK;
 			labibb_ctrl = true;
+		}
+#endif
+#if defined(CONFIG_LGE_DISPLAY_AOD_ON_CUSTOM)
+        /* U2_UNBLANK -> U3_UNBLANK */
+        else if ((blank_mode == FB_BLANK_UNBLANK && aod_node == 2 && aod_keep_u2 != AOD_KEEP_U2) ||
+			(blank_mode == FB_BLANK_UNBLANK && aod_node == 0 && aod_keep_u2 == AOD_MOVE_TO_U3)) {
+			cmd_status = AOD_CMD_DISABLE;
+			next_mode = AOD_PANEL_MODE_U3_UNBLANK;
+			labibb_ctrl = false;
+		}
+        /* U2_UNBLANK -> U0_BLANK */
+		else if (blank_mode == FB_BLANK_POWERDOWN && aod_node == 2) {
+			cmd_status = OFF_CMD;
+			next_mode = AOD_PANEL_MODE_U0_BLANK;
+			labibb_ctrl = false;
+		}
+        /* U2_UNBLANK -> U2_UNBLANK */
+		else if ((blank_mode == FB_BLANK_NORMAL || blank_mode == FB_BLANK_VSYNC_SUSPEND) && aod_node == 2) {
+			cmd_status = CMD_SKIP;
+			next_mode = AOD_PANEL_MODE_U2_UNBLANK;
+			labibb_ctrl = false;
 		}
 #endif
 		/* U2_UNBLANK -> U2_BLANK */
@@ -263,6 +299,14 @@ int oem_mdss_aod_decide_status(struct msm_fb_data_type *mfd, int blank_mode)
 			labibb_ctrl = true;
 		}
 #endif
+#if defined(CONFIG_LGE_DISPLAY_AOD_ON_CUSTOM)
+        /* U3_UNBLANK -> U2_UNBLANK */
+		else if (blank_mode == FB_BLANK_NORMAL && aod_node == 2) {
+			cmd_status = CMD_SKIP;
+			next_mode = AOD_PANEL_MODE_U2_UNBLANK;
+			labibb_ctrl = false;
+		}
+#endif
 		/* U3_UNBLANK -> U2_BLANK */
 		else if (blank_mode == FB_BLANK_POWERDOWN && aod_node == 1) {
 #if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI)
@@ -296,7 +340,7 @@ int oem_mdss_aod_decide_status(struct msm_fb_data_type *mfd, int blank_mode)
 
 	/* set backlight mode as aod mode changes */
 	oem_mdss_aod_set_backlight_mode(mfd);
-#if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI)
+#if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI) && !defined(CONFIG_LGE_DISPLAY_AOD_ON_CUSTOM)
 	if (mfd->panel_info->panel_type == LGD_SIC_LG49408_1440_2880_INCELL_CMD_PANEL) {
 		mutex_lock(&mfd->watch_lock);
 		lcd_watch_deside_status(mfd, cur_mode, next_mode);
@@ -315,13 +359,17 @@ error:
 		mfd->panel_info->aod_cmd_mode = ON_CMD;
 		mfd->panel_info->aod_cur_mode = AOD_PANEL_MODE_U3_UNBLANK;
 	}
+    else if ((blank_mode == FB_BLANK_NORMAL || blank_mode == FB_BLANK_VSYNC_SUSPEND)) {
+        mfd->panel_info->aod_cmd_mode = ON_CMD;
+		mfd->panel_info->aod_cur_mode = AOD_PANEL_MODE_U3_UNBLANK;
+    }
 	else {
 		mfd->panel_info->aod_cmd_mode = OFF_CMD;
 		mfd->panel_info->aod_cur_mode = AOD_PANEL_MODE_U0_BLANK;
 	}
 	/* set backlight mode as aod mode changes */
 	oem_mdss_aod_set_backlight_mode(mfd);
-#if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI)
+#if defined(CONFIG_LGE_DISPLAY_AOD_WITH_MIPI) && !defined(CONFIG_LGE_DISPLAY_AOD_ON_CUSTOM)
 	if (mfd->panel_info->panel_type == LGD_SIC_LG49408_1440_2880_INCELL_CMD_PANEL) {
 		mutex_lock(&mfd->watch_lock);
 		lcd_watch_deside_status(mfd, cur_mode, mfd->panel_info->aod_cur_mode);
