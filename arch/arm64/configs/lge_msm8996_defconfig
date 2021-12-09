@@ -103,7 +103,7 @@ CONFIG_LGE_PM_LLK_MODE=y
 # disabled on Lineage anyway.
 # It can be enabled here but to
 # have comparable results disable it.
-CONFIG_LGE_PM_SOC_SCALING=n
+CONFIG_LGE_PM_SOC_SCALING=y
 CONFIG_LGE_PM_UNIFIED_NODE=y
 CONFIG_LGE_PM_FACTORY_CABLE=y
 CONFIG_LGE_PM_PSEUDO_BATTERY=y

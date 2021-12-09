@@ -770,6 +770,7 @@
 				<  806400  787200 >,
 				<  883200  883200 >,
 				<  960000  960000 >,
+
 				< 1593600 1036000 >;
 		};
 
@@ -4200,4 +4201,10 @@
 
 //[B]fix build error at Pre_ES4 migration
 /delete-node/ &spi_12;
+&soc {
+/delete-node/ pps;
+};
+
+
+
 //[E]fix build error
