@@ -44,6 +44,7 @@
 #include <soc/qcom/scm.h>
 
 #include <linux/wakelock.h>
+#include <linux/input.h>
 #define FPC1020_RESET_LOW_US 1000
 #define FPC1020_RESET_HIGH1_US 100
 #define FPC1020_RESET_HIGH2_US 1250
@@ -72,7 +73,7 @@ struct vreg_config {
 	int ua_load;
 };
 
-static const struct vreg_config vreg_conf[] = {
+static const struct vreg_config const vreg_conf[] = {
 	{ "vdd_ana", 1800000UL, 1800000UL, 6000, },
 	{ "vcc_spi", 1800000UL, 1800000UL, 10, },
 	{ "vdd_io", 1800000UL, 1800000UL, 6000, },
@@ -81,6 +82,7 @@ static const struct vreg_config vreg_conf[] = {
 struct fpc1020_data {
 	struct device *dev;
 	struct spi_device *spi;
+	struct input_dev *input;
 	struct pinctrl *fingerprint_pinctrl;
 	struct pinctrl_state *pinctrl_state[ARRAY_SIZE(pctl_names)];
 	struct clk *iface_clk;
@@ -325,9 +327,9 @@ static ssize_t spi_owner_set(struct device *dev,
 	int rc;
 	bool to_tz;
 
-	if (!strncmp(buf, "tz", DSTRLEN("tz")))
+	if (!strncmp(buf, "tz", strlen("tz")))
 		to_tz = true;
-	else if (!strncmp(buf, "app", DSTRLEN("app")))
+	else if (!strncmp(buf, "app", strlen("app")))
 		to_tz = false;
 	else
 		return -EINVAL;
@@ -390,9 +392,9 @@ static ssize_t spi_bus_lock_set(struct device *dev,
 {
 	struct  fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strncmp(buf, "lock", DSTRLEN("lock")))
+	if (!strncmp(buf, "lock", strlen("lock")))
 		spi_bus_lock(fpc1020->spi->master);
-	else if (!strncmp(buf, "unlock", DSTRLEN("unlock")))
+	else if (!strncmp(buf, "unlock", strlen("unlock")))
 		spi_bus_unlock(fpc1020->spi->master);
 	else
 		return -EINVAL;
@@ -432,7 +434,7 @@ static ssize_t hw_reset_set(struct device *dev,
 	int rc;
 	struct  fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strncmp(buf, "reset", DSTRLEN("reset")))
+	if (!strncmp(buf, "reset", strlen("reset")))
 		rc = hw_reset(fpc1020);
 	else
 		return -EINVAL;
@@ -525,9 +527,9 @@ static ssize_t spi_prepare_set(struct device *dev,
 	int rc;
 	struct  fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strncmp(buf, "enable", DSTRLEN("enable")))
+	if (!strncmp(buf, "enable", strlen("enable")))
 		rc = device_prepare(fpc1020, true);
-	else if (!strncmp(buf, "disable", DSTRLEN("disable")))
+	else if (!strncmp(buf, "disable", strlen("disable")))
 		rc = device_prepare(fpc1020, false);
 	else
 		return -EINVAL;
@@ -544,12 +546,12 @@ static ssize_t wakeup_enable_set(struct device *dev,
 {
 	struct  fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strncmp(buf, "enable", DSTRLEN("enable")))
+	if (!strncmp(buf, "enable", strlen("enable")))
 	{
 		fpc1020->wakeup_enabled = true;
 		smp_wmb();
 	}
-	else if (!strncmp(buf, "disable", DSTRLEN("disable")))
+	else if (!strncmp(buf, "disable", strlen("disable")))
 	{
 		fpc1020->wakeup_enabled = false;
 		smp_wmb();
@@ -622,7 +624,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 		wake_lock_timeout(&fpc1020->ttw_wl, msecs_to_jiffies(FPC_TTW_HOLD_TIME));
 	}
 
-	sysfs_notify(&fpc1020->dev->kobj, NULL, dev_attr_irq.attr.name);
+	sysfs_notify(&fpc1020->input->dev.kobj, NULL, dev_attr_irq.attr.name);
 
 	return IRQ_HANDLED;
 }
@@ -771,6 +773,25 @@ static int fpc1020_probe(struct spi_device *spi)
 		device_init_wakeup(dev, 1);
 	}
 #endif
+
+	/* register input device */
+	fpc1020->input = input_allocate_device();
+	if(!fpc1020->input) {
+		dev_err(dev, "input_allocate_deivce failed.");
+		goto exit;
+	}
+
+	fpc1020->input->name = "fingerprint";
+	fpc1020->input->dev.init_name = "lge_fingerprint";
+
+	input_set_drvdata(fpc1020->input, fpc1020);
+	rc = input_register_device(fpc1020->input);
+	if(rc) {
+		dev_err(dev, "input_register_device failed.");
+		input_free_device(fpc1020->input);
+		goto exit;
+	}
+
 	mutex_init(&fpc1020->lock);
 	rc = devm_request_threaded_irq(dev, gpio_to_irq(fpc1020->irq_gpio),
 			NULL, fpc1020_irq_handler, irqf,
@@ -790,7 +811,7 @@ static int fpc1020_probe(struct spi_device *spi)
 #endif
 	wake_lock_init(&fpc1020->ttw_wl, WAKE_LOCK_SUSPEND, "fpc_ttw_wl");
 
-	rc = sysfs_create_group(&dev->kobj, &attribute_group);
+	rc = sysfs_create_group(&fpc1020->input->dev.kobj, &attribute_group);
 	if (rc) {
 		dev_err(dev, "could not create sysfs\n");
 		goto exit;
@@ -811,7 +832,7 @@ static int fpc1020_remove(struct spi_device *spi)
 {
 	struct  fpc1020_data *fpc1020 = dev_get_drvdata(&spi->dev);
 
-	sysfs_remove_group(&spi->dev.kobj, &attribute_group);
+	sysfs_remove_group(&fpc1020->input->dev.kobj, &attribute_group);
 	mutex_destroy(&fpc1020->lock);
 	wake_lock_destroy(&fpc1020->ttw_wl);
 	(void)vreg_setup(fpc1020, "vdd_io", false);
