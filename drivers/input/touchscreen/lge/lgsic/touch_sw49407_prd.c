@@ -262,12 +262,12 @@ static int prd_os_xline_result_read(struct device *dev,
 {
 	int i = 0;
 	int j = 0;
-	u16 buffer[ROW_SIZE*COL_SIZE] = {0,};
+	u16 buffer[ROW_SIZE*COL_SIZE];
 	int cur = 0;
 	int ret = 0;
 	u8 w_val = 0x0;
-	int row_size = 0;
-	int col_size = 0;
+	int row_size;
+	int col_size;
     struct sw49407_data *d = to_sw49407_data(dev);
 
 	sw49407_write_value(dev, spr_data_offset,
@@ -1856,7 +1856,7 @@ static ssize_t show_delta(struct device *dev, char *buf)
 	int i = 0;
 	int j = 0;
 
-	delta = kcalloc(COL_SIZE * ROW_SIZE, sizeof(int16_t), GFP_KERNEL);
+	delta = kzalloc(sizeof(int16_t) * (COL_SIZE*ROW_SIZE), GFP_KERNEL);
 
 	if (delta == NULL) {
 		TOUCH_E("delta mem_error\n");
@@ -1949,7 +1949,7 @@ static ssize_t show_rawdata(struct device *dev, char *buf)
 	int i = 0;
 	int j = 0;
 
-	rawdata = kcalloc(COL_SIZE * ROW_SIZE, sizeof(int16_t), GFP_KERNEL);
+	rawdata = kzalloc(sizeof(int16_t) * (COL_SIZE*ROW_SIZE), GFP_KERNEL);
 
 	if (rawdata == NULL) {
 		TOUCH_E("mem_error\n");

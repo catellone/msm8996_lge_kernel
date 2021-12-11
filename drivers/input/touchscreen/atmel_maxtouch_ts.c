@@ -1851,11 +1851,6 @@ static int mxt_load_cfg(struct mxt_data *data, bool force)
 	int ver[3];
 	u16 reg;
 
-	if (!data->cfg_name) {
-		dev_dbg(dev, "Skipping cfg download\n");
-		goto report_enable;
-	}
-
 	ret = request_firmware(&cfg, data->cfg_name, dev);
 	if (ret < 0) {
 		dev_err(dev, "Failure to request config file %s\n",
@@ -3096,8 +3091,8 @@ static int mxt_parse_dt(struct device *dev, struct mxt_platform_data *pdata)
 	/* keycodes for keyarray object */
 	prop = of_find_property(np, "atmel,key-codes", NULL);
 	if (prop) {
-		pdata->key_codes = devm_kcalloc(dev,
-				MXT_KEYARRAY_MAX_KEYS, sizeof(int),
+		pdata->key_codes = devm_kzalloc(dev,
+				sizeof(int) * MXT_KEYARRAY_MAX_KEYS,
 				GFP_KERNEL);
 		if (!pdata->key_codes)
 			return -ENOMEM;

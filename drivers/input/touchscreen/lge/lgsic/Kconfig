@@ -1,7 +1,6 @@
 #
 # LGE touch core configuration
 #
-
 if INPUT_TOUCHSCREEN
 
 menuconfig LGE_TOUCH_LGSIC_LG4945
@@ -34,4 +33,5 @@ menuconfig LGE_TOUCH_LGSIC_SW49408
         help
           If your device is sw49408, say Y
 
+# To Do : LGSIC Chipseet
 endif
