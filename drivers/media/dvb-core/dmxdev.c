@@ -36,13 +36,7 @@
 #include <linux/compat.h>
 #include "dmxdev.h"
 
-/* module parameters for overflow method configuration */
-#ifdef CONFIG_LGE_BROADCAST_ISDBT_JAPAN
-static int overflow_auto_flush = 0;
-#else /* CONFIG_LGE_BROADCAST_ISDBT_JAPAN */
 static int overflow_auto_flush = 1;
-#endif /* CONFIG_LGE_BROADCAST_ISDBT_JAPAN */
-
 module_param(overflow_auto_flush, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(overflow_auto_flush,
 	"Automatically flush buffer on overflow (default: on)");
@@ -455,7 +449,7 @@ static int dvb_dmxdev_update_events(struct dmxdev_events_queue *events,
 				bytes_read = 0;
 			}
 		} else {
-			if (bytes_read)
+			if (bytes_read) {
 				/*
 				 * data was read beyond the non-data event,
 				 * making it not relevant anymore
@@ -466,6 +460,7 @@ static int dvb_dmxdev_update_events(struct dmxdev_events_queue *events,
 				if (!(events->event_mask.no_wakeup_mask &
 					event->type))
 					events->wakeup_events_counter--;
+			}
 		}
 
 		events->read_index = events->notified_index;
@@ -4865,7 +4860,7 @@ int dvb_dmxdev_init(struct dmxdev *dmxdev, struct dvb_adapter *dvb_adapter)
 	if (dmxdev->demux->open(dmxdev->demux) < 0)
 		return -EUSERS;
 
-	dmxdev->filter = vmalloc(dmxdev->filternum * sizeof(struct dmxdev_filter));
+	dmxdev->filter = vmalloc(array_size(sizeof(struct dmxdev_filter), dmxdev->filternum));
 	if (!dmxdev->filter)
 		return -ENOMEM;
 
