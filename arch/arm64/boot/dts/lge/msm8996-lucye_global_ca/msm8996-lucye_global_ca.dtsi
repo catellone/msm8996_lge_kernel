@@ -10,7 +10,6 @@
  * GNU General Public License for more details.
  */
 
-#include <linux/kconfig.h>
 
 #include "msm8996-lucye_global_ca-pinctrl.dtsi"
 #include "msm8996-lucye_global_ca-misc.dtsi"
@@ -21,7 +20,6 @@
 #include "msm8996-lucye_global_ca-hdmi.dtsi"
 #include "msm8996-lucye_global_ca-fingerprint.dtsi"
 #include "msm8996-lucye_global_ca-usb.dtsi"
-#include "../msm8996-lineage.dtsi"
 
 / {
 	reserved-memory {
