@@ -113,14 +113,14 @@ static int32_t msm_vfe44_init_dt_parms(struct vfe_device *vfe_dev,
 		pr_err("%s: NO QOS entries found\n", __func__);
 		return -EINVAL;
 	} else {
-		dt_settings = kcalloc(dt_entries, sizeof(uint32_t),
-				      GFP_KERNEL);
+		dt_settings = kzalloc(sizeof(uint32_t) * dt_entries,
+			GFP_KERNEL);
 		if (!dt_settings) {
 			pr_err("%s:%d No memory\n", __func__, __LINE__);
 			return -ENOMEM;
 		}
-		dt_regs = kcalloc(dt_entries, sizeof(uint32_t),
-				  GFP_KERNEL);
+		dt_regs = kzalloc(sizeof(uint32_t) * dt_entries,
+			GFP_KERNEL);
 		if (!dt_regs) {
 			pr_err("%s:%d No memory\n", __func__, __LINE__);
 			kfree(dt_settings);
@@ -521,11 +521,10 @@ static void msm_vfe44_process_epoch_irq(struct vfe_device *vfe_dev,
 			pix_stream_count == 0) {
 			ISP_DBG("%s: SOF IRQ\n", __func__);
 			msm_isp_notify(vfe_dev, ISP_EVENT_SOF, VFE_PIX_0, ts);
-			if (vfe_dev->axi_data.stream_update[VFE_PIX_0]) {
+			if (vfe_dev->axi_data.stream_update[VFE_PIX_0])
 				msm_isp_axi_stream_update(vfe_dev, VFE_PIX_0);
 				vfe_dev->hw_info->vfe_ops.core_ops.reg_update(
 				   vfe_dev, VFE_PIX_0);
-			}
 		}
 	}
 }
