@@ -10,17 +10,8 @@
  * GNU General Public License for more details.
  */
 
-#include "../msm8996-lucye-common/msm8996-lucye-common-pm.dtsi"
-
-&pmi8994_gpios {
-	gpio@c300 { /* GPIO 4 - NC */
-		qcom,master-en = <0>;		/* Disable GPIO */
-		status = "okay";
-	};
-};
-
-&i2c_6 {
-	idtp9223-charger@61 {
-		status = "disabled";
-	};
-};
+////////////////////////////////////////////////////////////////////////////
+// 2016 04 11
+// You have to check each Revision Sound dtsi file in ../msm8996-sound/
+//
+////////////////////////////////////////////////////////////////////////////
