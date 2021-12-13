@@ -74,7 +74,7 @@ struct wifi_platform_data {
 
 typedef struct wifi_adapter_info {
 	const char	*name;
-	int			irq_num;
+	uint		irq_num;
 	uint		intr_flags;
 	const char	*fw_path;
 	const char	*nv_path;
