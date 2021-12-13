@@ -466,7 +466,7 @@ int mlx4_init_resource_tracker(struct mlx4_dev *dev)
 	int t;
 
 	priv->mfunc.master.res_tracker.slave_list =
-		kcalloc(dev->num_slaves, sizeof(struct slave_list),
+		kzalloc(dev->num_slaves * sizeof(struct slave_list),
 			GFP_KERNEL);
 	if (!priv->mfunc.master.res_tracker.slave_list)
 		return -ENOMEM;
@@ -486,20 +486,14 @@ int mlx4_init_resource_tracker(struct mlx4_dev *dev)
 	for (i = 0; i < MLX4_NUM_OF_RESOURCE_TYPE; i++) {
 		struct resource_allocator *res_alloc =
 			&priv->mfunc.master.res_tracker.res_alloc[i];
-		res_alloc->quota = kmalloc_array(dev->num_vfs + 1,
-						 sizeof(int),
-						 GFP_KERNEL);
-		res_alloc->guaranteed = kmalloc_array(dev->num_vfs + 1,
-						      sizeof(int),
-						      GFP_KERNEL);
+		res_alloc->quota = kmalloc((dev->num_vfs + 1) * sizeof(int), GFP_KERNEL);
+		res_alloc->guaranteed = kmalloc((dev->num_vfs + 1) * sizeof(int), GFP_KERNEL);
 		if (i == RES_MAC || i == RES_VLAN)
-			res_alloc->allocated = kcalloc(MLX4_MAX_PORTS * (dev->num_vfs + 1),
-							sizeof(int),
+			res_alloc->allocated = kzalloc(MLX4_MAX_PORTS *
+						       (dev->num_vfs + 1) * sizeof(int),
 							GFP_KERNEL);
 		else
-			res_alloc->allocated = kcalloc(dev->num_vfs + 1,
-						       sizeof(int),
-						       GFP_KERNEL);
+			res_alloc->allocated = kzalloc((dev->num_vfs + 1) * sizeof(int), GFP_KERNEL);
 
 		if (!res_alloc->quota || !res_alloc->guaranteed ||
 		    !res_alloc->allocated)
@@ -1046,7 +1040,7 @@ static int add_res_range(struct mlx4_dev *dev, int slave, u64 base, int count,
 	struct mlx4_resource_tracker *tracker = &priv->mfunc.master.res_tracker;
 	struct rb_root *root = &tracker->res_tree[type];
 
-	res_arr = kcalloc(count, sizeof(*res_arr), GFP_KERNEL);
+	res_arr = kzalloc(count * sizeof *res_arr, GFP_KERNEL);
 	if (!res_arr)
 		return -ENOMEM;
 
@@ -2480,13 +2474,13 @@ static int qp_get_mtt_size(struct mlx4_qp_context *qpc)
 	int total_pages;
 	int total_mem;
 	int page_offset = (be32_to_cpu(qpc->params2) >> 6) & 0x3f;
-	int tot;
 
 	sq_size = 1 << (log_sq_size + log_sq_sride + 4);
 	rq_size = (srq|rss|xrc) ? 0 : (1 << (log_rq_size + log_rq_stride + 4));
 	total_mem = sq_size + rq_size;
-	tot = (total_mem + (page_offset << 6)) >> page_shift;
-	total_pages = !tot ? 1 : roundup_pow_of_two(tot);
+	total_pages =
+		roundup_pow_of_two((total_mem + (page_offset << 6)) >>
+				   page_shift);
 
 	return total_pages;
 }
@@ -2715,7 +2709,7 @@ int mlx4_RST2INIT_QP_wrapper(struct mlx4_dev *dev, int slave,
 	u32 srqn = qp_get_srqn(qpc) & 0xffffff;
 	int use_srq = (qp_get_srqn(qpc) >> 24) & 1;
 	struct res_srq *srq;
-	int local_qpn = vhcr->in_modifier & 0xffffff;
+	int local_qpn = be32_to_cpu(qpc->local_qpn) & 0xffffff;
 
 	err = qp_res_start_move_to(dev, slave, qpn, RES_QP_HW, &qp, 0);
 	if (err)

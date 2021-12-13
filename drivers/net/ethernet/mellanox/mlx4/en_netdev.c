@@ -2475,14 +2475,13 @@ int mlx4_en_init_netdev(struct mlx4_en_dev *mdev, int port,
 	priv->tx_ring_num = prof->tx_ring_num;
 	priv->tx_work_limit = MLX4_EN_DEFAULT_TX_WORK;
 
-	priv->tx_ring = kcalloc(MAX_TX_RINGS,
-				sizeof(struct mlx4_en_tx_ring *),
+	priv->tx_ring = kzalloc(sizeof(struct mlx4_en_tx_ring *) * MAX_TX_RINGS,
 				GFP_KERNEL);
 	if (!priv->tx_ring) {
 		err = -ENOMEM;
 		goto out;
 	}
-	priv->tx_cq = kcalloc(MAX_TX_RINGS, sizeof(struct mlx4_en_cq *),
+	priv->tx_cq = kzalloc(sizeof(struct mlx4_en_cq *) * MAX_TX_RINGS,
 			      GFP_KERNEL);
 	if (!priv->tx_cq) {
 		err = -ENOMEM;
@@ -2639,8 +2638,9 @@ int mlx4_en_init_netdev(struct mlx4_en_dev *mdev, int port,
 	}
 	queue_delayed_work(mdev->workqueue, &priv->stats_task, STATS_DELAY);
 
-	queue_delayed_work(mdev->workqueue, &priv->service_task,
-			   SERVICE_TASK_DELAY);
+	if (mdev->dev->caps.flags2 & MLX4_DEV_CAP_FLAG2_TS)
+		queue_delayed_work(mdev->workqueue, &priv->service_task,
+				   SERVICE_TASK_DELAY);
 
 	err = register_netdev(dev);
 	if (err) {
