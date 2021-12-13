@@ -92,8 +92,7 @@ int mlx5_buf_alloc(struct mlx5_core_dev *dev, int size, int max_direct,
 
 		if (BITS_PER_LONG == 64) {
 			struct page **pages;
-			pages = kmalloc_array(buf->nbufs, sizeof(*pages),
-					      GFP_KERNEL);
+			pages = kmalloc(sizeof(*pages) * buf->nbufs, GFP_KERNEL);
 			if (!pages)
 				goto err_free;
 			for (i = 0; i < buf->nbufs; i++)

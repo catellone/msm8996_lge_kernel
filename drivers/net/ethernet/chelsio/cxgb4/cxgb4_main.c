@@ -529,7 +529,7 @@ static void dcb_tx_queue_prio_enable(struct net_device *dev, int enable)
 				"Can't %s DCB Priority on port %d, TX Queue %d: err=%d\n",
 				enable ? "set" : "unset", pi->port_id, i, -err);
 		else
-			txq->dcb_prio = enable ? value : 0;
+			txq->dcb_prio = value;
 	}
 }
 #endif /* CONFIG_CHELSIO_T4_DCB */
@@ -1065,7 +1065,7 @@ static int write_rss(const struct port_info *pi, const u16 *queues)
 	int i, err;
 	const struct sge_eth_rxq *q = &pi->adapter->sge.ethrxq[pi->first_qset];
 
-	rss = kmalloc_array(pi->rss_size, sizeof(u16), GFP_KERNEL);
+	rss = kmalloc(pi->rss_size * sizeof(u16), GFP_KERNEL);
 	if (!rss)
 		return -ENOMEM;
 
