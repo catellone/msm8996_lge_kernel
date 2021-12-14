@@ -765,7 +765,11 @@ typedef struct dhd_info {
 #define DHDIF_FWDER(dhdif)      FALSE
 
 /* Flag to indicate if we should download firmware on driver load */
+#ifdef ENABLE_INSMOD_NO_FW_LOAD
+uint dhd_download_fw_on_driverload = FALSE;
+#else
 uint dhd_download_fw_on_driverload = TRUE;
+#endif /* ENABLE_INSMOD_NO_FW_LOAD */
 
 /* Definitions to provide path to the firmware and nvram
  * example nvram_path[MOD_PARAM_PATHLEN]="/projects/wlan/nvram.txt"
@@ -948,13 +952,13 @@ dhd_cpumasks_init(dhd_info_t *dhd)
 	cpumask_clear(dhd->cpumask_secondary);
 
 	cpus = DHD_LB_PRIMARY_CPUS;
-	for (id = 0; id < NR_CPUS; id++) {
+	for (id = 0; id < num_possible_cpus(); id++) {
 		if (isset(&cpus, id))
 			cpumask_set_cpu(id, dhd->cpumask_primary);
 	}
 
 	cpus = DHD_LB_SECONDARY_CPUS;
-	for (id = 0; id < NR_CPUS; id++) {
+	for (id = 0; id < num_possible_cpus(); id++) {
 		if (isset(&cpus, id))
 			cpumask_set_cpu(id, dhd->cpumask_secondary);
 	}
@@ -3161,7 +3165,7 @@ _dhd_set_multicast_list(dhd_info_t *dhd, int ifidx)
 
 	strncpy(bufp, "mcast_list", buflen - 1);
 	bufp[buflen - 1] = '\0';
-	bufp += strlen("mcast_list") + 1;
+	bufp += DSTRLEN("mcast_list") + 1;
 
 	cnt = htol32(cnt);
 	memcpy(bufp, &cnt, sizeof(cnt));
@@ -8334,10 +8338,6 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	dhd->apf_set = FALSE;
 #endif /* APF */
 #endif /* PKT_FILTER_SUPPORT */
-#ifdef WLTDLS
-	dhd->tdls_enable = FALSE;
-	dhd_tdls_set_mode(dhd, false);
-#endif /* WLTDLS */
 	dhd->suspend_bcn_li_dtim = CUSTOM_SUSPEND_BCN_LI_DTIM;
 	DHD_TRACE(("Enter %s\n", __FUNCTION__));
 	dhd->op_mode = 0;
@@ -8412,6 +8412,10 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #if defined(ARP_OFFLOAD_SUPPORT)
 			arpoe = 0;
 #endif
+#ifdef WLTDLS
+	dhd->tdls_enable = FALSE;
+	dhd_tdls_set_mode(dhd, false);
+#endif /* WLTDLS */
 #ifdef PKT_FILTER_SUPPORT
 			dhd_pkt_filter_enable = FALSE;
 #endif

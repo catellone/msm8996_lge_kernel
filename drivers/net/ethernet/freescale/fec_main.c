@@ -58,6 +58,7 @@
 #include <linux/if_vlan.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/prefetch.h>
+#include <linux/pm_runtime.h>
 
 #include <asm/cacheflush.h>
 
@@ -2021,7 +2022,8 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	fep->mii_bus->priv = fep;
 	fep->mii_bus->parent = &pdev->dev;
 
-	fep->mii_bus->irq = kmalloc(sizeof(int) * PHY_MAX_ADDR, GFP_KERNEL);
+	fep->mii_bus->irq = kmalloc_array(PHY_MAX_ADDR, sizeof(int),
+					  GFP_KERNEL);
 	if (!fep->mii_bus->irq) {
 		err = -ENOMEM;
 		goto err_out_free_mdiobus;
@@ -3339,6 +3341,8 @@ fec_drv_remove(struct platform_device *pdev)
 	if (fep->reg_phy)
 		regulator_disable(fep->reg_phy);
 	fec_enet_clk_enable(ndev, false);
+	pm_runtime_put(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
 	of_node_put(fep->phy_node);
 	free_netdev(ndev);
 
