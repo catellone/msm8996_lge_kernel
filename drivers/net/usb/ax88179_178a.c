@@ -545,8 +545,8 @@ static int ax88179_get_eeprom(struct net_device *net,
 
 	first_word = eeprom->offset >> 1;
 	last_word = (eeprom->offset + eeprom->len - 1) >> 1;
-	eeprom_buff = kmalloc_array(last_word - first_word + 1, sizeof(u16),
-				    GFP_KERNEL);
+	eeprom_buff = kmalloc(sizeof(u16) * (last_word - first_word + 1),
+			      GFP_KERNEL);
 	if (!eeprom_buff)
 		return -ENOMEM;
 
@@ -1199,10 +1199,10 @@ static int ax88179_bind(struct usbnet *dev, struct usb_interface *intf)
 	if (ret)
 		goto out;
 
-	netdev_dbg(dev->net, "MAC [%02x-%02x-%02x-%02x-%02x-%02x]\n",
-		   dev->net->dev_addr[0], dev->net->dev_addr[1],
-		   dev->net->dev_addr[2], dev->net->dev_addr[3],
-		   dev->net->dev_addr[4], dev->net->dev_addr[5]);
+		netdev_dbg(dev->net, "MAC [%02x-%02x-%02x-%02x-%02x-%02x]\n",
+			   dev->net->dev_addr[0], dev->net->dev_addr[1],
+			   dev->net->dev_addr[2], dev->net->dev_addr[3],
+			   dev->net->dev_addr[4], dev->net->dev_addr[5]);
 
 	/* RX bulk configuration, default for USB3.0 to Giga*/
 	memcpy(tmp, &AX88179_BULKIN_SIZE[0], 5);
