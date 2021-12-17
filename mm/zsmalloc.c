@@ -1605,6 +1605,8 @@ struct zs_compact_control {
 	 /* Starting object index within @s_page which used for live object
 	  * in the subpage. */
 	int index;
+	/* how many of objects are migrated */
+	int nr_migrated;
 };
 
 static int migrate_zspage(struct zs_pool *pool, struct size_class *class,
@@ -1642,6 +1644,7 @@ static int migrate_zspage(struct zs_pool *pool, struct size_class *class,
 		record_obj(handle, free_obj);
 		unpin_tag(handle);
 		obj_free(pool, class, used_obj);
+		nr_migrated++;
 	}
 
 	/* Remember last position in this iteration */
@@ -1668,17 +1671,8 @@ static struct page *alloc_target_page(struct size_class *class)
 	return page;
 }
 
-/*
- * putback_zspage - add @first_page into right class's fullness list
- * @pool: target pool
- * @class: destination class
- * @first_page: target page
- *
- * Return @fist_page's fullness_group
- */
-static enum fullness_group putback_zspage(struct zs_pool *pool,
-			struct size_class *class,
-			struct page *first_page)
+static void putback_zspage(struct zs_pool *pool, struct size_class *class,
+				struct page *first_page)
 {
 	enum fullness_group fullness;
 
@@ -1696,8 +1690,6 @@ static enum fullness_group putback_zspage(struct zs_pool *pool,
 
 		free_zspage(first_page);
 	}
-
-	return fullness;
 }
 
 static struct page *isolate_source_page(struct size_class *class)
@@ -1745,9 +1737,7 @@ static unsigned long __zs_compact(struct zs_pool *pool,
 			break;
 
 		putback_zspage(pool, class, dst_page);
-		if (putback_zspage(pool, class, src_page) == ZS_EMPTY)
-			pool->stats.pages_compacted +=
-				get_pages_per_zspage(class->size);
+		putback_zspage(pool, class, src_page);
 		spin_unlock(&class->lock);
 		nr_total_migrated += cc.nr_migrated;
 		cond_resched();
@@ -1777,7 +1767,7 @@ unsigned long zs_compact(struct zs_pool *pool)
 		nr_migrated += __zs_compact(pool, class);
 	}
 
-	return pool->stats.pages_compacted;
+	return nr_migrated;
 }
 EXPORT_SYMBOL_GPL(zs_compact);
 
