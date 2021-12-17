@@ -36,7 +36,7 @@
 /* Globals */
 static int zram_major;
 static struct zram *zram_devices;
-static const char *default_compressor = "lz4";
+static const char *default_compressor = "lzo";
 
 /*
  * We don't need to see memory allocation errors more than once every 1
@@ -1277,7 +1277,7 @@ static int create_device(struct zram *zram, int device_id)
 
 	strlcpy(zram->compressor, default_compressor, sizeof(zram->compressor));
 	zram->meta = NULL;
-	zram->max_comp_streams = 2;
+	zram->max_comp_streams = 1;
 	return 0;
 
 out_free_queue:
