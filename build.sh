@@ -83,7 +83,7 @@ VER=$(cat $RDIR/$VFIL)
 # ------------------------- BUILD CONFIG OPTIONS -------------------------
 #
 # "user"@"host"
-KBUSER=stendro
+KBUSER=catellone
 KBHOST=github
 
 # ccache: yes or no
