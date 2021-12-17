@@ -52,7 +52,7 @@ BANNER=${MK2DIR}/banner
 CLEAN_DIR() {
 	echo "Cleaning folder..."
 	rm -rf $DDIR
-	rm -f $RDIR/$OUTDIR/${DEVICE}_${VER}-mk2000.zip
+	rm -f $RDIR/$OUTDIR/${DEVICE}_${VER}-EAS-Y.zip
 }
 
 SETUP_DIR() {
@@ -111,7 +111,7 @@ COPY_KERNEL() {
 ZIP_UP() {
 	echo "Creating AnyKernel3 archive..."
 	cd $DDIR
-	zip -7qr $RDIR/$OUTDIR/${DEVICE}_${VER}-mk2000.zip * \
+	zip -7qr $RDIR/$OUTDIR/${DEVICE}_${VER}-EAS-Y.zip * \
 		|| ABORT "Failed to create zip archive"
 }
 
