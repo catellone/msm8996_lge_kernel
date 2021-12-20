@@ -1605,6 +1605,8 @@ struct zs_compact_control {
 	 /* Starting object index within @s_page which used for live object
 	  * in the subpage. */
 	int index;
+	/* how many of objects are migrated */
+	int nr_migrated;
 };
 
 static int migrate_zspage(struct zs_pool *pool, struct size_class *class,
@@ -1642,6 +1644,7 @@ static int migrate_zspage(struct zs_pool *pool, struct size_class *class,
 		record_obj(handle, free_obj);
 		unpin_tag(handle);
 		obj_free(pool, class, used_obj);
+		nr_migrated++;
 	}
 
 	/* Remember last position in this iteration */
@@ -1764,7 +1767,7 @@ unsigned long zs_compact(struct zs_pool *pool)
 		nr_migrated += __zs_compact(pool, class);
 	}
 
-	return pool->stats.pages_compacted;
+	return nr_migrated;
 }
 EXPORT_SYMBOL_GPL(zs_compact);
 
