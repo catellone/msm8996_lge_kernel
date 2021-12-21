@@ -26,13 +26,6 @@ config IRQ_WORK
 config BUILDTIME_EXTABLE_SORT
 	bool
 
-config THREAD_INFO_IN_TASK
-	bool
-	help
-	  Select this to move thread_info off the stack into task_struct.  To
-	  make this work, an arch will need to remove all thread_info fields
-	  except flags and fix any runtime bugs.
-
 menu "General setup"
 
 config BROKEN
@@ -402,7 +395,6 @@ endchoice
 config SCHED_WALT
         bool "Support window based load tracking"
         depends on SMP
-        depends on FAIR_GROUP_SCHED
         help
         This feature will allow the scheduler to maintain a tunable window
 	based set of metrics for tasks and runqueues. These metrics can be
@@ -1189,6 +1181,42 @@ config DEBUG_BLK_CGROUP
 
 endif # CGROUPS
 
+config SCHED_HMP
+	bool "Scheduler support for heterogenous multi-processor systems"
+	depends on SMP && FAIR_GROUP_SCHED
+	help
+	  This feature will let the scheduler optimize task placement on
+	  systems made of heterogeneous cpus i.e cpus that differ either
+	  in their instructions per-cycle capability or the maximum
+	  frequency they can attain.
+
+config SCHED_HMP_CSTATE_AWARE
+	bool "CPU C-state aware scheduler"
+	depends on SCHED_HMP
+	help
+	  This feature will let the HMP scheduler optimize task placement
+	  with CPUs C-state. If this is enabled, scheduler places tasks
+	  onto the shallowest C-state CPU among the most power efficient CPUs.
+
+config SCHED_CORE_CTL
+	bool "QTI Core Control"
+	depends on SMP
+	help
+	  This options enables the core control functionality in
+	  the scheduler. Core control automatically offline and
+	  online cores based on cpu load and utilization.
+
+	  If unsure, say N here.
+
+config SCHED_QHMP
+	bool "QHMP scheduler extensions"
+	depends on SCHED_HMP
+	help
+	  This options enables the QHMP scheduler extensions like
+	  small task classification for task packing, mostly_idle
+	  packing knobs and energy-aware task placements and load
+	  balancing.
+
 config CHECKPOINT_RESTORE
 	bool "Checkpoint/restore support" if EXPERT
 	default n
@@ -1298,25 +1326,6 @@ config SCHED_TUNE
 
 	  If unsure, say N.
 
-config DYNAMIC_STUNE_BOOST
-	bool "Dynamic SchedTune boosting support"
-	depends on SCHED_TUNE
-	help
-	  This option extends the SchedTune framework and provides APIs to
-	  activate and reset SchedTune boosting from anywhere in the kernel.
-
-	  If unsure, say N.
-
-config DEFAULT_USE_ENERGY_AWARE
-	bool "Default to enabling the Energy Aware Scheduler feature"
-	default n
-	help
-	  This option defaults the ENERGY_AWARE scheduling feature to true,
-	  as without SCHED_DEBUG set this feature can't be enabled or disabled
-	  via sysctl.
-
-	  Say N if unsure.
-
 config SYSFS_DEPRECATED
 	bool "Enable deprecated sysfs features to support old userspace tools"
 	depends on SYSFS
@@ -1395,37 +1404,6 @@ config CC_OPTIMIZE_FOR_SIZE
 	  resulting in a smaller kernel.
 
 	  If unsure, say N.
-
-config HAVE_LD_DEAD_CODE_DATA_ELIMINATION
-	bool
-	help
-	  This requires that the arch annotates or otherwise protects
-	  its external entry points from being discarded. Linker scripts
-	  must also merge .text.*, .data.*, and .bss.* correctly into
-	  output sections. Care must be taken not to pull in unrelated
-	  sections (e.g., '.text.init'). Typically '.' in section names
-	  is used to distinguish them from label names / C identifiers.
-
-config LD_DEAD_CODE_DATA_ELIMINATION
-	bool "Dead code and data elimination (EXPERIMENTAL)"
-	depends on HAVE_LD_DEAD_CODE_DATA_ELIMINATION
-	depends on EXPERT
-	help
-	  Select this if the architecture wants to do dead code and
-	  data elimination with the linker by compiling with
-	  -ffunction-sections -fdata-sections, and linking with
-	  --gc-sections.
-
-	  This can reduce on disk and in-memory size of the kernel
-	  code and static data, particularly for small configs and
-	  on small systems. This has the possibility of introducing
-	  silently broken kernel if the required annotations are not
-	  present. This option is not well tested yet, so use at your
-	  own risk.
-
-config LTO
-	bool "Enable Link Time Optimization"
-	select THIN_ARCHIVES
 
 config SYSCTL
 	bool

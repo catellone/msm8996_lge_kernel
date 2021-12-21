@@ -17,36 +17,9 @@ GZFLAGS		:=-9
 
 KBUILD_DEFCONFIG := defconfig
 
-ifeq ($(CONFIG_COMPAT_VDSO), y)
-  CROSS_COMPILE_ARM32 ?= $(CONFIG_CROSS_COMPILE_ARM32:"%"=%)
-
-  # Check that the user has provided a valid prefix for the 32-bit toolchain.
-  # To prevent selecting the system CC by default, the prefix is not
-  # allowed to be empty, unlike CROSS_COMPILE. In the unlikely event that the
-  # system CC is actually the 32-bit ARM compiler to be used, the
-  # variable can be set to the dirname (e.g. CROSS_COMPILE_ARM32=/usr/bin/).
-  # Note: this Makefile is read both before and after regenerating the config
-  # (if needed). Any warning appearing before the config has been regenerated
-  # should be ignored. If the error is triggered and you set
-  # CONFIG_CROSS_COMPILE_ARM32, set CROSS_COMPILE_ARM32 to an appropriate value
-  # when invoking make and fix CONFIG_CROSS_COMPILE_ARM32.
-  ifeq ($(CROSS_COMPILE_ARM32),)
-    $(error CROSS_COMPILE_ARM32 not defined or empty, the compat vDSO will not be built)
-  else ifeq ($(shell which $(CROSS_COMPILE_ARM32)gcc 2> /dev/null),)
-    $(error $(CROSS_COMPILE_ARM32)gcc not found, check CROSS_COMPILE_ARM32)
-  else
-    export CROSS_COMPILE_ARM32
-    export CONFIG_VDSO32 := y
-    vdso32 := -DCONFIG_VDSO32=1
-  endif
-endif
-
-KBUILD_CFLAGS	+= $(vdso32)
 KBUILD_CFLAGS	+= -mgeneral-regs-only
-KBUILD_CFLAGS	+= -fno-asynchronous-unwind-tables
 KBUILD_CFLAGS	+= -fno-pic
-KBUILD_CFLAGS	+= $(call cc-ifversion, -ge, 0500, -DCONFIG_ARCH_SUPPORTS_INT128)
-KBUILD_AFLAGS	+= $(vdso32)
+KBUILD_CFLAGS	+= $(call cc-option, -mpc-relative-literal-loads)
 
 KBUILD_CFLAGS	+= $(call cc-option,-mabi=lp64)
 KBUILD_AFLAGS	+= $(call cc-option,-mabi=lp64)
@@ -55,22 +28,17 @@ ifeq ($(CONFIG_CPU_BIG_ENDIAN), y)
 KBUILD_CPPFLAGS	+= -mbig-endian
 AS		+= -EB
 LD		+= -EB
-ifeq ($(CONFIG_LTO),)
-LDFLAGS		+= $(call ld-option, -maarch64elfb, -maarch64linuxb, -maarch64_elf64_be_vec)
-endif
+LDFLAGS		+= -maarch64linuxb
 else
 KBUILD_CPPFLAGS	+= -mlittle-endian
 AS		+= -EL
 LD		+= -EL
-ifeq ($(CONFIG_LTO),)
-LDFLAGS		+= $(call ld-option, -maarch64elf, -maarch64linux, -maarch64_elf64_le_vec)
-endif
+LDFLAGS		+= -maarch64linux
 endif
 
 CHECKFLAGS	+= -D__aarch64__
 
 ifeq ($(CONFIG_ARM64_ERRATUM_843419), y)
-KBUILD_CFLAGS	+= $(call cc-option, -mpc-relative-literal-loads)
 KBUILD_CFLAGS_MODULE	+= -mcmodel=large
 endif
 
@@ -82,6 +50,10 @@ ifeq ($(CONFIG_ARM64_RANDOMIZE_TEXT_OFFSET), y)
 TEXT_OFFSET := $(shell awk 'BEGIN {srand(); printf "0x%03x000\n", int(512 * rand())}')
 else
 TEXT_OFFSET := 0x00080000
+endif
+
+ifeq ($(cc-name),clang)
+KBUILD_CFLAGS += $(call cc-disable-warning, asm-operand-widths)
 endif
 
 # KASAN_SHADOW_OFFSET = VA_START + (1 << (VA_BITS - 3)) - (1 << 61)
@@ -101,21 +73,14 @@ core-$(CONFIG_CRYPTO) += arch/arm64/crypto/
 libs-y		:= arch/arm64/lib/ $(libs-y)
 libs-$(CONFIG_EFI_STUB) += drivers/firmware/efi/libstub/
 
-ifeq ($(CONFIG_BUILD_ARM64_KERNEL_COMPRESSION_LZ4),y)
-KBUILD_COMPRESS_SUFFIX := lz4
-KBUILD_COMPRESS_CMD := lz4
-endif
 ifeq ($(CONFIG_BUILD_ARM64_KERNEL_COMPRESSION_GZIP),y)
-KBUILD_COMPRESS_SUFFIX := gz
-KBUILD_COMPRESS_CMD := gzip
+KBUILD_IMAGE   := Image.gz
+else
+KBUILD_IMAGE   := Image
 endif
-
-export KBUILD_COMPRESS_SUFFIX KBUILD_COMPRESS_CMD
 
 ifeq ($(CONFIG_BUILD_ARM64_APPENDED_DTB_IMAGE),y)
-KBUILD_IMAGE	:= Image.$(KBUILD_COMPRESS_SUFFIX)-dtb
-else
-KBUILD_IMAGE	:= Image.$(KBUILD_COMPRESS_SUFFIX)
+KBUILD_IMAGE   := $(addsuffix -dtb,$(KBUILD_IMAGE))
 endif
 
 KBUILD_DTBS	:= dtbs
@@ -124,7 +89,7 @@ all:	$(KBUILD_IMAGE) $(KBUILD_DTBS)
 
 boot := arch/arm64/boot
 
-Image Image.$(KBUILD_COMPRESS_SUFFIX): vmlinux
+Image Image.gz: vmlinux
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
 zinstall install: vmlinux
@@ -141,7 +106,7 @@ dtbs: prepare scripts
 dtbs_install:
 	$(Q)$(MAKE) $(dtbinst)=$(boot)/dts
 
-Image.$(KBUILD_COMPRESS_SUFFIX)-dtb: vmlinux scripts dtbs
+Image-dtb Image.gz-dtb: vmlinux scripts dtbs
 	$(Q)$(MAKE) $(build)=$(boot) $(boot)/$@
 
 PHONY += vdso_install
@@ -162,12 +127,9 @@ archclean:
 prepare: vdso_prepare
 vdso_prepare: prepare0
 	$(Q)$(MAKE) $(build)=arch/arm64/kernel/vdso include/generated/vdso-offsets.h
-	$(if $(CONFIG_VDSO32),$(Q)$(MAKE) $(build)=arch/arm64/kernel/vdso32 \
-					  include/generated/vdso32-offsets.h)
 
 define archhelp
-  echo  '* Image.gz      - Gzip compressed kernel image (arch/$(ARCH)/boot/Image.gz)'
-  echo  '* Image.lz4     - LZ4 compressed kernel image (arch/$(ARCH)/boot/Image.lz4)'
+  echo  '* Image.gz      - Compressed kernel image (arch/$(ARCH)/boot/Image.gz)'
   echo  '  Image         - Uncompressed kernel image (arch/$(ARCH)/boot/Image)'
   echo  '* dtbs          - Build device tree blobs for enabled boards'
   echo  '  dtbs_install  - Install dtbs to $(INSTALL_DTBS_PATH)'
