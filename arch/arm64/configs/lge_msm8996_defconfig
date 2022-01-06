@@ -160,6 +160,9 @@ CONFIG_SDFAT_STATISTICS=y
 # KCAL Control
 CONFIG_FB_MSM_MDSS_KCAL_CTRL=y 
 
+# Klapse - Linear RGB scaling
+CONFIG_KLAPSE=y
+
 # Realtek Ethernet
 CONFIG_USB_RTL8152=y
 
