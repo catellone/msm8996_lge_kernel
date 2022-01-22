@@ -207,7 +207,7 @@ void uvc_simplify_fraction(uint32_t *numerator, uint32_t *denominator,
 	uint32_t x, y, r;
 	unsigned int i, n;
 
-	an = kmalloc(n_terms * sizeof *an, GFP_KERNEL);
+	an = kmalloc_array(n_terms, sizeof(*an), GFP_KERNEL);
 	if (an == NULL)
 		return;
 
@@ -2161,8 +2161,8 @@ static int uvc_clock_param_get(char *buffer, struct kernel_param *kp)
 
 static int uvc_clock_param_set(const char *val, struct kernel_param *kp)
 {
-	if (strncasecmp(val, "clock_", strlen("clock_")) == 0)
-		val += strlen("clock_");
+	if (strncasecmp(val, "clock_", DSTRLEN("clock_")) == 0)
+		val += DSTRLEN("clock_");
 
 	if (strcasecmp(val, "monotonic") == 0)
 		uvc_clock_param = CLOCK_MONOTONIC;

@@ -23,7 +23,6 @@
 #include "vidc_hfi_api.h"
 #include "msm_vidc_debug.h"
 #include "msm_vidc_dcvs.h"
-#include "msm_vdec.h"
 
 #define IS_ALREADY_IN_STATE(__p, __d) ({\
 	int __rc = (__p >= __d);\
@@ -297,7 +296,7 @@ static int msm_comm_get_mbs_per_frame(struct msm_vidc_inst *inst)
 
 static int msm_comm_get_mbs_per_sec(struct msm_vidc_inst *inst)
 {
-	int rc;
+	int rc = 0;
 	u32 fps;
 	struct v4l2_control ctrl;
 	int mb_per_frame;
@@ -1227,14 +1226,9 @@ static void handle_event_change(enum hal_command_response cmd, void *data)
 				"V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT due to bit-depth change\n");
 	}
 
-#ifdef CONFIG_MACH_LGE
-	    if (inst->pic_struct != event_notify->pic_struct && !((inst->flags & VIDC_SECURE) && (inst->fmts[OUTPUT_PORT].fourcc == V4L2_PIX_FMT_MPEG2))){
-//[S][LGDTV][isdbt-fwk@lge.com] Conditions are added to check if instance is secure and mpeg2
-#else
 	if (inst->fmts[CAPTURE_PORT].fourcc == V4L2_PIX_FMT_NV12 &&
 		event_notify->pic_struct != MSM_VIDC_PIC_STRUCT_UNKNOWN &&
 		inst->pic_struct != event_notify->pic_struct) {
-#endif
 		inst->pic_struct = event_notify->pic_struct;
 		event = V4L2_EVENT_SEQ_CHANGED_INSUFFICIENT;
 		ptr[2] |= V4L2_EVENT_PICSTRUCT_FLAG;
@@ -1526,7 +1520,7 @@ static void handle_session_flush(enum hal_command_response cmd, void *data)
 	struct v4l2_event flush_event = {0};
 	u32 *ptr = NULL;
 	enum hal_flush flush_type;
-	int rc;
+	int rc = 0;
 
 	if (!response) {
 		dprintk(VIDC_ERR, "Failed to get valid response for flush\n");
@@ -4621,11 +4615,12 @@ int msm_comm_flush(struct msm_vidc_inst *inst, u32 flags)
 
 		/*Do not send flush in case of session_error */
 		if (!(inst->state == MSM_VIDC_CORE_INVALID &&
-			  core->state != VIDC_CORE_INVALID))
+			  core->state != VIDC_CORE_INVALID)) {
 			atomic_inc(&inst->in_flush);
 			dprintk(VIDC_DBG, "Send flush all to firmware\n");
 			rc = call_hfi_op(hdev, session_flush, inst->session,
 				HAL_FLUSH_ALL);
+			}
 	}
 
 	return rc;
